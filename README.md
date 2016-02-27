@@ -1,0 +1,3 @@
+# My Sample Ember
+
+My first ember project...
