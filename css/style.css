@@ -1,0 +1,41 @@
+html {
+    font-family: sans-serif; /* 1 */
+}
+
+table {
+    border-collapse: collapse;
+}
+
+.ember-application {
+    margin: 20px;
+}
+
+.active{
+	font-weight : bold;
+}
+
+.tab-heading1{
+	font-size : 22px;
+	height : 50px;
+}
+
+.tab-heading2{
+	font-size : 18px;
+	height : 40px;
+}
+
+.table-heading{
+	font-size : 16px;
+	height : 30px;
+	font-weight : bold;
+}
+
+.table-item{
+	font-size : 16px;
+	height : 30px;
+}
+
+.height50{
+	height : 50px;
+}
+

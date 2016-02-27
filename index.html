@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Zoho Directory Sync</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+  <script src="js/libs/jquery-1.10.2.js"></script>
+  <script src="js/libs/handlebars-1.1.2.js"></script>
+  <script src="js/libs/ember-1.6.1.js"></script>
+  <script src="js/app.js"></script>
+
+  <script type="text/x-handlebars">
+	  <div id="pageHeader">
+	   <p>ZOHO Directory Sync</p>
+	  </div>
+	  <table id="mainTable" width="100%" border=1>
+		<tr>
+			<td width="230px">
+			
+				<table width="100%">
+					<tr height="50px"> <td> 
+					{{#link-to 'DirectorySync'}}
+						Directory Sync 
+					{{/link-to}}
+					</td> </tr>
+					<tr height="50px"> <td> 
+					{{#link-to 'PasswordSync'}}
+					Password Sync 
+					{{/link-to}}
+					</td> </tr>
+					<tr height="50px"> <td> Configuration </td> </tr>
+
+					<tr height="50px"> <td> 
+					{{#link-to 'PasswordSyncValues'}}
+					Password Synced values 
+					{{/link-to}}
+					</td> </tr>
+					
+				</table>
+			
+			</td>
+			<td>
+			
+				{{outlet}}
+			
+			</td>
+		</tr>
+	  </table>
+  </script>
+
+  
+  <script type="text/x-handlebars" id="DirectorySync">
+  
+	<table width="100%" border=0>
+		<tr> <td> 
+			<div class="tab-heading1">Schedule Directory Sync </div>
+		</td> </tr>
+		<tr> 
+			<td> 
+			<div class="tab-heading2">Scheduled List : </div>
+			</td> 
+			<td align="right">
+				<div>
+					{{#link-to 'createScheduler'}}
+						+ Create Scheduler
+					{{/link-to}}
+				</div>
+			</td>
+		</tr>
+		<tr> <td>
+		   <table width="100%">
+		   <tr class="scheduler-heading">
+			<td> <div >Actions </div>	</td> 
+			<td> <div>Scheduler Name </div>	</td> 
+			<td> <div>Description</div>	</td> 
+			<td> <div>Time</div>	</td> 
+			<td> <div>Notification Email Address</div>	</td> 
+		   </tr>
+		{{#each}}
+		   <tr class="scheduler-item">
+			<td> <div >Actions </div>	</td> 
+			<td> <div>{{schedulerName}} </div>	</td> 
+			<td> <div>{{description}}</div>	</td> 
+			<td> <div>{{time}}</div>	</td> 
+			<td> <div>{{notificationEmailAddress}}</div>	</td> 
+		   </tr>
+		{{/each}}
+		   </table>
+		</td> </tr>
+	</table>
+  </script>
+
+  <script type="text/x-handlebars" id="createScheduler">
+  
+	<table width="100%" border=0>
+		<tr> <td> 
+			<div class="tab-heading1">Create New Schedule </div>
+		</td> </tr>
+		<tr> 
+			<td> 
+			   <table width="50%">
+			   <tr class="height50">
+					<td width="35%"> <div >Scheduler Name </div>	</td> 
+					<td width="65%"> <input type="text" name="schedulerInput">	</td> 
+			   </tr>
+			   <tr class="height50">
+					<td width="35%"> <div >Description </div>	</td> 
+					<td width="65%"> <input type="text" name="descriptionInput">	</td> 
+			   </tr>
+			   <tr class="height50">
+					<td width="35%"> <div >Select Domain </div>	</td> 
+					<td width="65%"> 
+						<span> <input type="checkbox" name="selectDomainInput" value="zohocorp.com"></span>  <span>zohocorp.com </span>
+						<span><input type="checkbox" name="selectDomainInput" value="admp.com"></span>	  <span>admp.com </span>
+					</td> 
+			   </tr>
+			   <tr class="height50">
+					<td width="35%"> <div >Schedule duration </div>	</td> 
+					<td width="65%"> 
+						<span>
+						<select>
+						  <option value="hourly">Hourly</option>
+						  <option value="daily">Daily</option>
+						  <option value="weekly">Weekly</option>
+						  <option value="monthly">Monthly</option>
+						</select>
+						</span>
+						<span>
+							For Each
+						</span>
+						<span>
+						<select>
+						  <option value="3">3</option>
+						  <option value="6">6</option>
+						  <option value="9">9</option>
+						  <option value="12">12</option>
+						</select>
+						</span>
+					</td> 
+			   </tr>
+			   <tr class="height50">
+					<td width="35%"> <div > </div>	</td> 
+					<td width="65%"> <span><input type="checkbox" name="isNotifyEmailInput"> </span> <span> Email Address To Notify</span>	</td> 
+			   </tr>
+			   
+			   <tr class="height50">
+				<td width="35%"> </td>
+				<td width="65%"> 
+					<span> <input type="button" name="addSchedule" value="Add" ></span>
+					<span> <input type="button" name="cancelSchedule" value="Cancel" ></span>
+				</td>
+			   </tr>
+			   </table>
+			</td>
+		</tr>
+	</table>
+  </script>
+
+  <script type="text/x-handlebars" id="PasswordSync">
+    <p>test password sync</p>
+  </script>
+
+  <script type="text/x-handlebars" id="PasswordSyncValues">
+	<table width="100%" border=0>
+		<tr> <td> 
+			<div class="tab-heading1">Synced Accounts </div>
+		</td> </tr>
+		<tr> <td>
+		   <table width="100%">
+		   <tr class="table-heading">
+			<td> <div >Unique ID </div>	</td> 
+			<td> <div>Account Name </div>	</td> 
+			<td> <div>Time</div>	</td> 
+			<td> <div>Status</div>	</td> 
+		   </tr>
+		{{#each}}
+		   <tr class="table-item">
+			<td> <div>{{uniqueId}} </div>	</td> 
+			<td> <div>{{accountName}} </div>	</td> 
+			<td> <div>{{time}}</div>	</td> 
+			<td> <div>{{status}}</div>	</td> 
+		   </tr>
+		{{/each}}
+		   </table>
+		</td> </tr>
+	</table>
+  </script>
+
+
+</body>
+</html>
