@@ -1,0 +1,541 @@
+
+class AhalTest
+{
+
+	public AhalTest(){
+	}
+	
+	public static void main(String ar[]){
+		System.out.println("test");
+	}
+	
+	public static declareTables(){
+		ArrayList<String> tblDisplayAttributeListCols = new ArrayList<String>();
+		tblDisplayAttributeListCols.add(new String("intRowNum"));
+		tblDisplayAttributeListCols.add(new String("intMetricId"));
+		tblDisplayAttributeListCols.add(new String("intCubeAttributeID"));
+		tblDisplayAttributeListCols.add(new String("strAttributeDisplayName"));
+		tblDisplayAttributeListCols.add(new String("strAttributeDBName"));
+		tblDisplayAttributeListCols.add(new String("strDimName"));
+		tblDisplayAttributeListCols.add(new String("strIsAggregateColumn"));
+
+		tblDisplayAttributeList = new Table("tblDisplayAttributeList");
+		tblDimAttribList = new Table("tblDimAttribList");
+		tblWhereConditionList = new Table("tblWhereConditionList");
+		tblHeaderText = new Table("tblHeaderText");
+		tblGroupBySQLPart = new Table("tblGroupBySQLPart");
+		tblSelectSQLPart = new Table("tblSelectSQLPart");
+		tblWhereCond = new Table("tblWhereCond");
+		tmp_tblResult = new Table("tmp_tblResult");
+		
+	}
+	
+	public static Table tblDisplayAttributeList;
+	public static Table tblDimAttribList;
+	public static Table tblWhereConditionList;
+	public static Table tblHeaderText;
+	public static Table tblGroupBySQLPart;
+	public static Table tblSelectSQLPart;
+	public static Table tblWhereCond;
+	public static Table tmp_tblResult;
+
+	public static drillThroughSql(String astrASServereName, 
+									String astrASDBName,
+									String astrASCubePerspectiveName,
+									String astrMetricName,
+									String astrAttributeIDList,
+									String astrQueryString
+									){
+										
+		int astrVZAIConnId = ;
+		String astrMessage;
+		String astrQUeryStringtxt;
+		
+		String astrQueryStringNew;
+		if(astrQUeryStringtxt != null){	astrQueryStringNew = astrQUeryStringtxt;}
+		if(astrQueryString != null){ astrQueryStringNew = astrQueryString;}
+		
+		declareTables();
+		// TODO - create table #tmp_tblResult
+		// TODO - declare variables
+
+		// queryCubePerspectiveInfo should return based on the astrVZAIConnId...
+		Hashtable<String, String> result = queryCubePerspectiveInfo(astrASServereName, astrASDBName, astrASCubePerspectiveName, astrVZAIConnId);
+		intCubePerspectiveID = result.get("intCubePerspectiveID");
+		strCubeID = result.get("strCubeID");
+		strCubeName = result.get("strCubeName");
+		
+		
+		// Select part of the sql
+		Hashtable<String, String> result = queryCubeMetricInfo(intCubePerspectiveID, astrMetricName);
+		strDrlThrDtlBaseSQL = result.get("");
+		strDrlThrDtlSQLHint = result.get("");
+		strDrlThrDtlSQLProvider = result.get("");
+		strExcludeDimensionIDList = result.get("");
+		intConnID = result.get("");
+		strDistinctSQL = result.get("");
+		intPageSize = result.get("");
+		strFactTable = result.get("");
+		
+		// queryConnectionStrings
+		strDataSource = queryConnectionStrings(intConnID);
+		strLoadMessage = queryCubeSourceLoadStatus(strDataSource, strFactTable);
+		
+		/*
+			IF @@RowCount > 0
+			BEGIN
+				SET @astrMessage = @strLoadMessage
+				RETURN -1
+			END
+		*/
+		
+		// select and insert into tblDisplayAttributeList
+		selectAndInsertTblDisplayAttributeList(astrAttributeIDList);
+		
+		intKeyWordPos = strDrlThrDtlBaseSQL.indexOf("SELECT");
+		if(intKeyWordPos>0){
+			strDrlThrDtlBaseSQL = sqlStuff(strDrlThrDtlBaseSQL, intKeyWordPos, 0, strDrlThrDtlSQLHint);
+		}else{
+			strDrlThrDtlBaseSQL = "SELECT " + strDrlThrDtlSQLHint + strDrlThrDtlBaseSQL;
+		}
+		
+		/* INSERT #tmp_tblResult (strDrlThrDtlSQL) SELECT @strDrlThrDtlBaseSQL */
+		Hashtable<String, String> tableRow = new Hashtable<String, String>();
+		tableRow.put("strDrlThrDtlSQL", strDrlThrDtlBaseSQL);
+		tmp_tblResult.addRow(tableRow);
+		
+		String strSelectSQLPart = "";
+		String strGroupBySQLPart = "";
+		
+		// query tblDisplayAttributeList for rowNum and rowCount
+		Hashtable<String, String> result = queryRowNumRowCountTblDisplayAttributeList();
+		intRowNum = 1;
+		intRowCount = result.get("");
+		
+		while(intRowNum <= intRowCount){
+			Hashtable<String, String> result = querySelectPartGroupByPartTblDisplayAttributeList(intRowNum);
+			strSelectSQLPart = result.get("");
+			strGroupBySQLPart = result.get("");
+			
+			/*if(strSelectSQLPart.length() > 7000){
+				// INSERT @tblSelectSQLPart (strSelectSQLPart) SELECT @strSelectSQLPart
+				strSelectSQLPart = "";
+			}
+			if(strGroupBySQLPart.length() > 7000){
+				// INSERT @tblGroupBySQLPart (strGroupBySQLPart) SELECT @strGroupBySQLPart
+				strGroupBySQLPart = "";
+			}*/
+			intRowNum++;
+		}
+		
+		if(strSelectSQLPart.length()>0){
+			strSelectSQLPart = sqlLeft(strSelectSQLPart, strSelectSQLPart.length()-1);
+		}
+		// INSERT @tblSelectSQLPart (strSelectSQLPart) SELECT @strSelectSQLPart
+		row = new Hashtable<String, String>();
+		row.put("strSelectSQLPart", strSelectSQLPart);
+		tblSelectSQLPart.addRow(row);
+		
+		if(strGroupBySQLPart.length()>0){
+			strGroupBySQLPart = sqlLeft(strGroupBySQLPart, strGroupBySQLPart.length()-1);
+		}
+		// INSERT @tblGroupBySQLPart (strGroupBySQLPart) SELECT @strGroupBySQLPart
+		row = new Hashtable<String, String>();
+		row.put("strGroupBySQLPart", strGroupBySQLPart);
+		tblGroupBySQLPart.addRow(row);
+		
+		// Update @tblGroupBySQLPart SET strGroupBySQLPart = ' GROUP BY ' + strGroupBySQLPart WHERE intRowNum = 1
+		ArrayList<Hashtable> tblGroupBySQLPartRows = tblGroupBySQLPart.getRows();
+		Hastable firstRow = tblGroupBySQLPartRows.get(0);
+		String temp = firstRow.get("strGroupBySQLPart");
+		firstRow.set("strGroupBySQLPart", " GROUP BY "+temp);
+		
+		row = new Hashtable<String, String>();
+		row.put("strWhereCond", "");
+		tblWhereCond.addRow(row);
+		
+		
+		if(astrQueryStringNew.length()>1){
+			// Replace the values in the astrQueryStringNew
+			ArrayList<String> strValues = fnConvertListToTable(astrQueryStringNew,null,',[');
+			Hashtable<String, String> chkDuplicates = new Hashtable<String, String>();
+			for(String strValue : strValues){
+				if(chkDuplicates.get(strValue) != null && !strValue.equals("")){
+					row = Hastable<String, String>();
+					row.put("strRawAttribute", "["+strValue);
+					chkDuplicates.put(strValue, "");
+					if(strValue.indexOf("].&[") > -1 ){
+						row.put("strHasValueSeperator", "Y");
+					}else{
+						row.put("strHasValueSeperator", "N");
+					}
+					tblDimAttribList.addRow(row);
+				}
+			}
+		}
+		
+		for(Hashtable<String, String> eachRow : tblDimAttribList.getRows()){
+			String replace1 = sqlReplace(eachRow.get("strRawAttribute"), "].&[", "].[" );
+			Integer charIndex1 = sqlCharIndex("].[", replace1);
+			String strDimName = sqlSubString(replace1, 1, charIndex1);
+			String strDimAttributeValue = "";
+			eachRow.put("strDimName", strDimName);
+			eachRow.put("strDimAttributeValue", strDimAttributeValue);
+			
+		}
+		for(Hashtable<String, String> eachRow : tblDimAttribList.getRows()){
+			String strDimAttributeRawValue;
+			String strRawAttribute = eachRow.get("strRawAttribute");
+			if(eachRow.get("strHasValueSeperator").equals("Y")){
+				strDimAttributeRawValue = sqlSubString(
+												strRawAttribute,
+												sqlCharIndex("&[", strRawAttribute)+1,
+												sqlLen(strRawAttribute) - sqlCharIndex("&[", strRawAttribute) + 1
+											);
+			}else{
+				strDimAttributeRawValue = sqlSubString(
+												strRawAttribute,
+												sqlCharIndex("].[", strRawAttribute)+2,
+												sqlLen(strRawAttribute) - sqlCharIndex("].[", strRawAttribute)
+											);
+			}
+			String strDimAttributeName = null;
+			if(eachRow.get("strHasValueSeperator").equals("Y")){
+				strDimAttributeName = sqlSubString(
+											strRawAttribute,
+											1,
+											sqlCharIndex("&[", strRawAttribute) - 2
+										);
+			}
+			eachRow.set("strDimAttributeRawValue", strDimAttributeRawValue);
+			eachRow.set("strDimAttributeName", strDimAttributeName);
+		}
+		
+	
+		String strDimName;
+		for(Hashtable eachRow : tblDimAttribList){
+			if(eachRow.get("strHasValueSeperator").equals("Y")){
+				strDimName = sqlRight(eachRow.get("strDimAttributeName"), sqlCharIndex("[.]"), sqlReverse(strDimAttributeName));
+			}
+		}
+		
+		if(!strDimName.equals("")){
+			for(Hashtable eachRow : tblDimAttribList){
+				if(eachRow.get("strHasValueSeperator").equals("Y")){
+					String strDimAttributeName = sqlRight(eachRow.get("strDimAttributeName"), 
+													sqlCharIndex("[.]", 
+													sqlReverse(eachRow.get("strDimAttributeName")))
+												);
+					eachRow.put("strDimAttributeName", strDimAttributeName);
+				}
+			}
+		}
+		
+		
+		for(Hashtable<String, String> eachRow : tblDimAttribList){
+			if(eachRow.get("strHasValueSeperator").equals("N")){
+				result = queryStrDimAttributeName(eachRow.get("strDimName"), strCubeName, astrASServerName, astrASDBName, strCubeID);
+				eachRow.get("strDimAttributeName", result.get("strDimAttributeName"));
+				eachRow.get("intDimLevel", result.get("intDimLevel"));
+			}
+		}
+		
+		for(int i=0;i<tblDimAttribList.getRows().size();i++){
+			Hashtable<String, String> eachRow = tblDimAttribList.getRows().get(i);
+			if(!eachRow.get("strDimAttributeValue").equals(eachRow.get("strDimAttributeRawValue"))){
+				String strDimAttributeRawValue = eachRow.get("strDimAttributeRawValue");
+				
+				Table tblNewDimAttribList = fnConvertListToTable(strDimAttributeRawValue, null, ".[");
+				for(Hashtable eachNewTableRow : tblNewDimAttribList.getRows()){
+					String strDimAttributeValue;
+					Integer intDimLevel = eachNewTableRow.get("intID")
+					if((Integer)eachNewTableRow.get("intID") == 1){
+						strDimAttributeValue = ""+eachNewTableRow.get("strValue1");
+					}else{
+						strDimAttributeValue = "["+eachNewTableRow.get("strValue1");
+					}
+					Hashtable<String, String> newRow = new Hashtable<String, String>();
+					newRow.put("strDimAttributeValue", strDimAttributeValue);
+					newRow.put("strDimAttributeRawValue", strDimAttributeValue);
+					newRow.put("intDimLevel", eachRow.get("intDimLevel")+intDimLevel);// TODO - convert string to int
+					newRow.put("strDimName", eachRow.get("strDimName"));
+					newRow.put("strRawAttribute", eachRow.get("strRawAttribute"));
+					tblDimAttribList.addRow(newRow);
+				}
+				eachRow.put("strDimAttributeRawValue", eachRow.get("strDimAttributeValue"));
+				
+			}
+		}
+		
+		for(Hashtable eachRow : tblDimAttribList){
+			String strDimName = eachRow.get("strDimName");
+			String intDimLevel = eachRow.get("intDimLevel");
+			
+			result = queryCubeAttributesInfo(strDimName, intDimLevel, strCubeName, strCubeID);
+			if(result != null){
+				eachRow.put("intCubeAttributeID", result.get("intCubeAttributeID"));
+				eachRow.put("strDimAttributeName", result.get("strDimAttributeName"));
+				eachRow.put("strAttributeDBName", result.get("strAttributeDBName"));
+			}
+		}
+		ArrayList<Hashtable> tableRows = tblDimAttribList.getRows();
+		for(int i=0;i<tblDimAttribList.getRows().size();i++){
+			Hashtable eachRow = tableRows.get(i);
+			if(eachRow.get("strHasValueSeperator") != null || eachRow.get("intCubeAttributeID") == null || eachRow.get("intDimLevel").equals("0")){
+				tableRows.remove(i);
+				i--;
+			}
+		}
+		
+		
+		// TODO - need to confirm whether the distinct logic is correct!
+		Hashtable<String, String> duplicateCheck = new Hashtable<String, String>();
+		for(Hashtable eachRow : tblDimAttribList){
+			if(duplicateCheck.get(eachRow.get("intCubeAttributeID")) == null){
+				duplicateCheck.put(eachRow.get("intCubeAttributeID"), " ");
+				Hashtable<String, String> newRow = new Hashtable<String, String>();
+				newRow.put("intCubeAttributeID", eachRow.get("intCubeAttributeID"));
+				newRow.put("strDimAttributeName", eachRow.get("strDimAttributeName"));
+				newRow.put("strAttributeDBName", eachRow.get("strAttributeDBName"));
+				newRow.put("strDimName", eachRow.get("strDimName"));
+				tblWhereConditionList.addRow(newRow);
+			}
+		}
+		
+		for(Hashtable eachRow : tblWhereConditionList.getRows()){
+			String intCubeAttributeID = eachRow.get("intCubeAttributeID");
+			String strDimAttributeValues = ",";
+			for(Hashtable eachDimAttribListRow : tblDimAttribList.getRows()){
+				if(eachDimAttribListRow.get("intCubeAttributeID").equals(intCubeAttributeID)){
+					strDimAttributeValues = strDimAttributeValues + eachDimAttribListRow.get("strDimAttributeValue");
+					break;
+				}
+			}
+			eachRow.put("strDimAttributeValues", strDimAttributeValues);
+		}
+		
+		// String strWhereCond = "";
+		// String strHeaderText = "";
+		
+		for(Hashtable eachRow : tblWhereConditionList){
+			// TODO use StringBuilder
+			String strHeaderText = strHeaderText + eachRow.get("strDimAttributeName") + " HAVING (";
+			strHeaderText = strHeaderText + sqlReplace(
+												sqlReplace(
+													sqlReplace(eachRow.get("strDimAttributeValues"), "],[", "','"), 
+													",[",
+													"'"
+												),
+												"],",
+												"'"
+											) + ")";
+			
+			String strWhereCond = " AND (" + eachRow.get("strAttributeDBName") + " IN (" +
+								sqlReplace(
+									sqlReplace(
+										sqlReplace(
+											eachRow.get("strDimAttributeValues"), 
+											"],[", 
+											"','"
+										),
+										",[",
+										"'"
+									),
+									"],",
+									"'"
+								) 
+								+ ")"; 
+			if(sqlCharIndex("[]", eachRow.get("strDimAttributeValues")) > 0 ){
+				strWhereCond = strWhereCond + " OR  " + eachRow.get("strAttributeDBName") + " IS NULL )";
+			}
+			String strDimName = eachRow.get("strDimName");
+			row = new Hashtable<String, String>();
+			row.put("strWhereCond", strWhereCond);
+			row.put("strDimName", strDimName);
+			tblWhereCond.addRow(row);
+		}
+		// -- DOUBT -- no value assigned for 'strWhereCond'
+		/*row = new Hashtable<String, String>();
+		row.put("strWhereCond", strWhereCond);
+		tblWhereCond.addRow(row);*/
+		
+		row = new Hashtable<String, String>();
+		row.put("strHeaderText", astrMetricName + " by  " + strHeaderText);
+		tblHeaderText.addRow(row);
+		
+		// Hashtable firstRow = tblHeaderText.getRows().get(0);
+		// firstRow.put("strHeaderText", astrMetricName+" by  "+)
+		
+		
+		
+		ArrayList<String> strDimNameList = new ArrayList<String>();
+		for(Hashtable eachRow : tblDisplayAttributeList.getRows()){
+			strDimNameList.add(eachRow.get("strDimName"));}
+		for(Hashtable eachRow : tblDimAttribList.getRows()){
+			strDimNameList.add(eachRow.get("strDimName"));}
+			
+		ArrayList<String> intDimIDList = new ArrayList<String>();
+		Table tblExcludeDimensionIDList = fnConvertListToTable(strExcludeDimensionIDList, null, ",");
+		for(Hashtable eachRow : tblExcludeDimensionIDList){
+			intDimIDList.add(eachRow.get("strValue1"));
+		}
+		
+		result = queryCubeDimensionInfo(strCubeName, astrASServerName, astrASDBName, strCubeID, strDimNameList, intDimIDList);
+		String strFromClause = result.get("strFromClause"); 
+		String strJoinCond = result.get("strJoinCond");
+		
+		// TODO need to be sure about this
+		firstRow = tblWhereCond.getRows().get(0);
+		firstRow.put("strWhereCond", strJoinCond);
+		
+		// firstRow = tmp_tblResult.getRows().get(0);
+		firstRow = tblHeaderText.getRows().get(0);
+		for(Hashtable eachRow : tmp_tblResult.getRows()){
+			eachRow.put("intConnID", intConnID);
+			eachRow.put("intPageSize", intPageSize);
+			eachRow.put("strDistinctSQL", strDistinctSQL);
+			eachRow.put("strDrlThrDtlSQLProvider", strDrlThrDtlSQLProvider);
+			eachRow.put("strHeaderText", firstRow.get("strHeaderText"));
+		}
+		
+		
+		Integer int_offset, int_dellen;
+		String strNewStr, strOldStr;
+		
+		int_dellen = sqlLen(strOldStr);
+		
+		Hashtable tmp_tblResultFirstRow = tmp_tblResult.getRows().get(0);
+		for(int i=1;i<tblHeaderText.getRows().size();i++){
+			Hashtable eachRow = tblHeaderText.getRows().get(i);
+			strNewStr = eachRow.get("strHeaderText");
+			// We can also use sqlLen.. Need to check
+			int_offset = sqlDataLength(tmp_tblResultFirstRow.get("strHeaderText"));
+			
+			String toUpdateString = tmp_tblResultFirstRow.get("strHeaderText");
+			String updatedString = toUpdateString.substring(0,int_offset) + strNewStr + toUpdateString.substring(int_offset);
+			tmp_tblResultFirstRow.put("strHeaderText", updatedString);
+			
+		}
+		
+		strOldStr = "%&AddSelectColumns&";
+		int_dellen = sqlLen(strOldStr);
+		
+		int_offset = tmp_tblResultFirstRow.get("strDrlThrDtlSQL").indexOf(strOldStr);
+		while(int_offset>0){
+			for(int i=0;i<tblSelectSQLPart.getRows().size();i++){
+				Hashtable eachRow = tblSelectSQLPart.getRows().get(i);
+				String strNewStr = eachRow.get("strSelectSQLPart").trim();
+				if(i == tblSelectSQLPart.getRows().size()-1 && strNewStr.endsWith(",")){
+					strNewStr = strNewStr.substring(0, strNewStr.length()-2);
+				}
+				
+				String toUpdateString = tmp_tblResultFirstRow.get("strDrlThrDtlSQL");
+				String updatedString = toUpdateString.substring(0,int_offset) + strNewStr + toUpdateString.substring(int_offset);
+				tmp_tblResultFirstRow.put("strDrlThrDtlSQL", updatedString);
+				int_offset += strNewStr.length();
+			}
+			String toUpdateString = tmp_tblResultFirstRow.get("strDrlThrDtlSQL");
+			String updatedString = toUpdateString.substring(0,int_offset) + "" + toUpdateString.substring(int_offset+int_dellen);
+			tmp_tblResultFirstRow.put("strDrlThrDtlSQL", updatedString);
+			
+			int_offset = tmp_tblResultFirstRow.get("strDrlThrDtlSQL").indexOf(strOldStr);
+		}
+		
+		// --Replace the GroupbySQLPart        
+		strOldStr = "&AddGroupbyColumns&";
+		int_dellen = sqlLen(strOldStr);
+		
+		int_offset = tmp_tblResultFirstRow.get("strDrlThrDtlSQL").indexOf(strOldStr);
+		// int_offset--;
+		while(int_offset>0){
+			for(int i=0;i<tblGroupBySQLPart.getRows().size();i++){
+				Hashtable eachRow = tblGroupBySQLPart.getRows().get(i);
+				String strNewStr = eachRow.get("strGroupBySQLPart");
+				
+				String toUpdateString = tmp_tblResultFirstRow.get("strDrlThrDtlSQL");
+				String updatedString = toUpdateString.substring(0,int_offset) + strNewStr + toUpdateString.substring(int_offset);
+				tmp_tblResultFirstRow.put("strDrlThrDtlSQL", updatedString);
+				int_offset += strNewStr.length();
+			}
+			String toUpdateString = tmp_tblResultFirstRow.get("strDrlThrDtlSQL");
+			String updatedString = toUpdateString.substring(0,int_offset) + "" + toUpdateString.substring(int_offset+int_dellen);
+			tmp_tblResultFirstRow.put("strDrlThrDtlSQL", updatedString);
+			
+			int_offset = tmp_tblResultFirstRow.get("strDrlThrDtlSQL").indexOf(strOldStr);
+		}
+		
+		// --Replace the WhereCond
+		strOldStr = "&AddWhereCondition&";
+		int_dellen = sqlLen(strOldStr);
+		int_offset = tmp_tblResultFirstRow.get("strDrlThrDtlSQL").indexOf(strOldStr);
+		// int_offset--;
+		while(int_offset>0){
+			for(int i=0;i<tblWhereCond.getRows().size();i++){
+				Hashtable eachRow = tblWhereCond.getRows().get(i);
+				
+				ArrayList<String> intDimIDList = new ArrayList<String>();
+				Table tblExcludeDimensionIDList = fnConvertListToTable(@strExcludeDimensionIDList,null,",");
+				for(Hashtable eachRow : tblExcludeDimensionIDList){
+					intDimIDList.add(eachRow.get("strValue1"));
+				}
+				ArrayList<String> strDimNameList = queryCubeDimensionInfoForDistinctDimName(intDimIDList);
+				if(!strDimNameList.contains(sqlIsNull(eachRow.get("strDimName"), 0)) ){
+					String strNewStr = eachRow.get("strWhereCond");
+					
+					String toUpdateString = tmp_tblResultFirstRow.get("strDrlThrDtlSQL");
+					String updatedString = toUpdateString.substring(0,int_offset) + strNewStr + toUpdateString.substring(int_offset);
+					tmp_tblResultFirstRow.put("strDrlThrDtlSQL", updatedString);
+					int_offset += strNewStr.length();
+					strNewStr = "";
+				}
+				
+			}
+			String toUpdateString = tmp_tblResultFirstRow.get("strDrlThrDtlSQL");
+			String updatedString = toUpdateString.substring(0,int_offset) + "" + toUpdateString.substring(int_offset+int_dellen);
+			tmp_tblResultFirstRow.put("strDrlThrDtlSQL", updatedString);
+			
+			int_offset = tmp_tblResultFirstRow.get("strDrlThrDtlSQL").indexOf(strOldStr);
+		}
+		
+		// --Replace the FromClause
+		strOldStr = "&AddFromClause&";
+		int_dellen = sqlLen(strOldStr);
+		int_offset = tmp_tblResultFirstRow.get("strDrlThrDtlSQL").indexOf(strOldStr);
+		// int_offset--;
+		while(int_offset>0){
+			strNewStr = strFromClause;
+			int_offset = int_offset - 1; // TODO need to check this line is needed..
+			
+			String toUpdateString = tmp_tblResultFirstRow.get("strDrlThrDtlSQL");
+			String updatedString = toUpdateString.substring(0,int_offset) + strNewStr + toUpdateString.substring(int_offset+int_dellen);
+			tmp_tblResultFirstRow.put("strDrlThrDtlSQL", updatedString);
+
+			int_offset = tmp_tblResultFirstRow.get("strDrlThrDtlSQL").indexOf(strOldStr);
+		}
+		
+		
+		// --Replace the DimWhereCond
+		
+		
+	} // END - drillThroughSql
+	
+	
+}
+
+class Table
+{
+	ArrayList<Hashtable> rows;
+	String tableName;
+	
+	public Table(String tableName){
+		this.tableName = tableName;
+	}
+	
+	public void addRow(Hashtable row){
+		rows.add(row);
+	}
+	
+	public ArrayList<Hashtable> getRows(){
+		return rows;
+	}
+}
